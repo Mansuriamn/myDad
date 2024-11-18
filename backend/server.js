@@ -1,10 +1,9 @@
-
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const path = require('path');
 const mysql = require('mysql');
-const helmet=require('helmet')
+
 // Load environment variables
 dotenv.config();
 const _dirname = path.resolve();
@@ -20,22 +19,14 @@ app.use(cors({
 
 app.use(express.json());
 app.use(express.static(path.join(_dirname, "/frontend/dist")));
-app.use(express.urlencoded({ extended: true }));
-app.use(helmet());
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({
-    status: 'error',
-    message: 'Something broke!'
-  });
-});
+
 // Create MySQL connection pool with more detailed configuration
 const pool = mysql.createPool({
   connectionLimit: 10,
-  host: process.env.DB_HOST || 'localhost',
-  user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || 'root',
-  database: process.env.DB_NAME || 'joke',
+  host: process.env.DB_HOST || '192.168.238.84',
+  user: process.env.DB_USER || 'boot',
+  password: process.env.DB_PASSWORD || 'boot',
+  database: process.env.DB_NAME || 'fun',
   port: process.env.DB_PORT || 3306,
   connectTimeout: 10000,
   waitForConnections: true,
@@ -83,37 +74,20 @@ const fetchJokesFromDB = () => {
   });
 };
 
-
+// API endpoint to fetch jokes
 app.get('/post', async (req, res) => {
   try {
     const jokes = await fetchJokesFromDB();
-    
-    if (!jokes || jokes.length === 0) {
-      return res.status(404).json({
-        status: 'error',
-        message: 'No jokes found'
-      });
-    }
-
-    res.json({
-      status: 'success',
-      data: jokes
-    });
-
+    res.json(jokes);
   } catch (error) {
-    console.error('Error details:', {
-      message: error.message,
-      stack: error.stack,
-      timestamp: new Date().toISOString()
-    });
-
+    console.error('Error fetching jokes:', error);
     res.status(500).json({
-      status: 'error',
-      message: 'Internal server error',
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      error: 'Internal server error',
+      message: error.message || 'Please try again later'
     });
   }
 });
+
 // Serve frontend for all other routes
 app.get('*', (req, res) => {
   res.sendFile(path.resolve(_dirname, "frontend", "dist", "index.html"));
