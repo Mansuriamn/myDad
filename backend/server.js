@@ -2,22 +2,24 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const path = require('path');
-const mysql = require('mysql');
-// Load environment variables
+
 dotenv.config();
-const _dirname = path.resolve();
 
 const app = express();
 
-// Configure CORS to allow requests from any origin
+const _dirname=path.resolve();
+// CORS configuration
 app.use(cors({
-  origin: '*',  // Be more restrictive in production
+  origin: ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:4000', 'YOUR_ACTUAL_FRONTEND_DOMAIN'],
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   credentials: true
 }));
 
 app.use(express.json());
-app.use(express.static(path.join(_dirname, "/frontend/dist")));
+
+// Serve static files from frontend build
+app.use(express.static(path.join(_dirname, 'frontend/dist')));
+
 
  const jokes = [
   {
@@ -173,14 +175,13 @@ app.use(express.static(path.join(_dirname, "/frontend/dist")));
 ];
 
 // API endpoint to fetch jokes
-app.get('/post', async (req, res) => {
+app.get('/post', (req, res) => {
   res.json(jokes);
 });
 
-
-// Serve frontend for all other routes
+// Catch-all route to serve frontend for client-side routing
 app.get('*', (req, res) => {
-  res.sendFile(path.resolve(_dirname, "frontend", "dist", "index.html"));
+  res.sendFile(path.join(_dirname, 'frontend', 'dist', 'index.html'));
 });
 
 // Error handling middleware
@@ -192,7 +193,7 @@ app.use((err, req, res, next) => {
   });
 });
 
-const port = process.env.PORT || 3000;
-app.listen(port, () => {
+const port = process.env.PORT || 4000;
+app.listen(port, '0.0.0.0', () => {
   console.log(`Server running at http://localhost:${port}`);
 });
