@@ -9,11 +9,7 @@ const app = express();
 
 const _dirname=path.resolve();
 // CORS configuration
-app.use(cors({
-  origin: ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:4000', 'YOUR_ACTUAL_FRONTEND_DOMAIN'],
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  credentials: true
-}));
+app.use(cors());
 
 app.use(express.json());
 
@@ -175,7 +171,7 @@ app.use(express.static(path.join(_dirname, 'frontend/dist')));
 ];
 
 // API endpoint to fetch jokes
-app.get('/post', (req, res) => {
+app.get('/api/post', (req, res) => {
   res.json(jokes);
 });
 
