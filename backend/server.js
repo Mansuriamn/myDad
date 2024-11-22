@@ -20,9 +20,7 @@ let jokesCache = {
 const CACHE_DURATION = 5 * 60 * 1000;
 
 app.use(express.json());
-app.use(cors({
-  origin: ['http://localhost:3000', 'https://pokemon-quey.onrender.com']
-}));
+app.use(cors());
 app.use(express.static(path.join(_dirname, "/frontend/dist")));
 
 // Create MySQL connection pool
@@ -33,6 +31,43 @@ const pool = mysql.createPool({
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME
 });
+function testDatabaseConnection() {
+  pool.getConnection((err, connection) => {
+    if (err) {
+      console.error('❌ Database Connection Error:');
+      console.error('Error Code:', err.code);
+      console.error('Error Message:', err.message);
+      console.error('Connection Details:');
+      console.error('Host:', process.env.DB_HOST);
+      console.error('User:', process.env.DB_USER);
+      console.error('Database:', process.env.DB_NAME);
+      
+      switch(err.code) {
+        case 'PROTOCOL_CONNECTION_LOST':
+          console.error('Database connection was closed.');
+          break;
+        case 'ER_CON_COUNT_ERROR':
+          console.error('Database has too many connections.');
+          break;
+        case 'ECONNREFUSED':
+          console.error('Database connection was refused. Check if MySQL is running.');
+          break;
+        case 'ETIMEDOUT':
+          console.error('Connection timed out. Check your network and database host.');
+          break;
+        default:
+          console.error('Unknown connection error');
+      }
+      return;
+    }
+
+    console.log('✅ Successfully connected to the database!');
+    connection.release(); // Always release the connection
+  });
+}
+
+// Run the connection test
+testDatabaseConnection();
 
 // Function to check if cache is valid
 const isCacheValid = () => {
