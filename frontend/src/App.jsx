@@ -1,125 +1,187 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import './App.css';
+import React, { useState } from "react";
+import { initializeApp } from "firebase/app";
+import { getDatabase, ref, push } from "firebase/database";
 
-export default function App() {
-  const [dt, setDt] = useState([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
+// Firebase Configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyAlY48wIHQvCGwqb7da7m2Sn0XsbMCMqNg",
+  authDomain: "signup-1f80b.firebaseapp.com",
+  databaseURL: "https://signup-1f80b-default-rtdb.firebaseio.com",
+  projectId: "signup-1f80b",
+  storageBucket: "signup-1f80b.appspot.com",
+  messagingSenderId: "534035974426",
+  appId: "1:534035974426:web:4a983d6a53bbe5ca5504a3",
+  measurementId: "G-0S0PLWBV2Q",
+};
 
-  // Initialize data from localStorage immediately
-  useEffect(() => {
-    const cachedData = localStorage.getItem('cachedJokes');
-    if (cachedData) {
-      setDt(JSON.parse(cachedData));
-      setLoading(false);
-    }
-  }, []);
+// Initialize Firebase
+let app;
+try {
+  app = initializeApp(firebaseConfig);
+} catch (error) {
+  console.error("Firebase initialization error:", error);
+}
 
-  // Handle online/offline status
-  useEffect(() => {
-    const handleOnline = () => {
-      setIsOnline(true);
-      setError(null);
-      fetchData();
-    };
+const database = getDatabase(app);
 
-    const handleOffline = () => {
-      setIsOnline(false);
-      setError('You are currently offline. Showing cached data.');
-    };
+function App() {
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    password: "",
+  });
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
 
-    // Initial fetch if online
-    if (navigator.onLine) {
-      fetchData();
-    }
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError("");
+    setSuccess(false);
 
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
-
-  const fetchData = async () => {
     try {
-      const response = await axios.get('/api/post', {
-        timeout: 5000,
-        headers: {
-          'Cache-Control': 'no-cache',
-          'Pragma': 'no-cache'
-        }
+      const messagesRef = ref(database, "messages");
+      await push(messagesRef, {
+        ...formData,
+        timestamp: new Date().toISOString()
       });
 
-      if (response.data && response.data.length > 0) {
-        // Update state and cache
-        setDt(response.data);
-        localStorage.setItem('cachedJokes', JSON.stringify(response.data));
-        setError(null);
-      }
-    } catch (err) {
-      console.error('Error fetching data:', err);
-      const cachedData = localStorage.getItem('cachedJokes');
+      // Clear form
+      setFormData({
+        name: "",
+        email: "",
+        password: "",
+      });
       
-      if (cachedData && dt.length === 0) {
-        setDt(JSON.parse(cachedData));
-        setError('Unable to fetch new data. Showing cached data.');
-      } else if (!cachedData && dt.length === 0) {
-        setError('No data available. Please check your connection and try again.');
-      }
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 3000);
+    } catch (error) {
+      console.error("Error submitting form:", error);
+      setError("Failed to submit form. Please try again.");
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
-  const handleNextJoke = () => {
-    setCurrentIndex((prevIndex) => (prevIndex + 1) % dt.length);
-  };
-
-  if (loading && dt.length === 0) {
-    return (
-      <div className="flex items-center justify-center p-4">
-        <p>Loading...</p>
-      </div>
-    );
-  }
-
   return (
-    <div className="p-4">
+    <div style={{
+      maxWidth: "400px",
+      margin: "40px auto",
+      padding: "20px",
+      boxShadow: "0 0 10px rgba(0,0,0,0.1)",
+      borderRadius: "8px"
+    }}>
+      <h2 style={{ textAlign: "center", marginBottom: "20px" }}>Sign Up</h2>
+      
       {error && (
-        <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4">
+        <div style={{
+          padding: "10px",
+          backgroundColor: "#ffebee",
+          color: "#c62828",
+          marginBottom: "20px",
+          borderRadius: "4px"
+        }}>
           {error}
         </div>
       )}
-      {!isOnline && (
-        <div className="bg-orange-100 border-l-4 border-orange-500 text-orange-700 p-4 mb-4">
-          You are currently offline
+
+      {success && (
+        <div style={{
+          padding: "10px",
+          backgroundColor: "#e8f5e9",
+          color: "#2e7d32",
+          marginBottom: "20px",
+          borderRadius: "4px"
+        }}>
+          Form submitted successfully!
         </div>
       )}
 
-      {dt.length > 0 ? (
-        <div className="container">
-          <h2 className="text-xl font-bold">{dt[currentIndex].title}</h2>
-          <p className="mt-2">{dt[currentIndex].body}</p>
+      <form onSubmit={handleSubmit}>
+        <div style={{ marginBottom: "15px" }}>
+          <label style={{ display: "block", marginBottom: "5px" }}>
+            Name:
+            <input
+              type="text"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              required
+              style={{
+                width: "100%",
+                padding: "8px",
+                border: "1px solid #ddd",
+                borderRadius: "4px"
+              }}
+            />
+          </label>
         </div>
-      ) : (
-        <div className="text-center p-4">
-          <p>No data available</p>
-        </div>
-      )}
 
-      <button 
-        onClick={handleNextJoke} 
-        className="btn" 
-        id="jokeBtn"
-        disabled={dt.length === 0}
-      >
-        Next joke 😂😂
-      </button>
+        <div style={{ marginBottom: "15px" }}>
+          <label style={{ display: "block", marginBottom: "5px" }}>
+            Email:
+            <input
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              required
+              style={{
+                width: "100%",
+                padding: "8px",
+                border: "1px solid #ddd",
+                borderRadius: "4px"
+              }}
+            />
+          </label>
+        </div>
+
+        <div style={{ marginBottom: "15px" }}>
+          <label style={{ display: "block", marginBottom: "5px" }}>
+            Password:
+            <input
+              type="password"
+              name="password"
+              value={formData.password}
+              onChange={handleChange}
+              required
+              style={{
+                width: "100%",
+                padding: "8px",
+                border: "1px solid #ddd",
+                borderRadius: "4px"
+              }}
+            />
+          </label>
+        </div>
+
+        <button
+          type="submit"
+          disabled={isLoading}
+          style={{
+            width: "100%",
+            padding: "10px",
+            backgroundColor: isLoading ? "#ccc" : "#007bff",
+            color: "white",
+            border: "none",
+            borderRadius: "4px",
+            cursor: isLoading ? "not-allowed" : "pointer"
+          }}
+        >
+          {isLoading ? "Submitting..." : "Submit"}
+        </button>
+      </form>
     </div>
   );
 }
+
+export default App;
